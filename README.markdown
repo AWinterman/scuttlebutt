@@ -158,18 +158,20 @@ another master node and have master nodes replicate each way.
 ## Implementing Custom Scuttlebutts
 
 The user must inherit from `Scuttlebutt` and provide an implementation of `history()` and `applyUpdate()`.
+Both methods rely on an `update` data structre, which has form 
+`[[key, value], timestamp, source_id]`
 
 ### Scuttlebutt#history(sources)
 
-`sources` is a hash of source_ids: timestamps. 
-History must return an array of all known events from all sources
-That occur after the given timestamps for each source.
+`sources` is an object literal mapping `source_id`s to `timestamp`s. 
+History must return an array of all known `update`s from all sources
+that occur after the given timestamps for each source.
 
 The array MUST be in order by timestamp.
 
 ### Scuttlebutt#applyUpdate (update)
 
-Possibly apply a given update to the subclasses model.
+Possibly apply the given `update` to the subclass's model.
 Return 'true' if the update was applied. (See scuttlebutt/model.js
 for an example of a subclass that does not apply every update.)
 
@@ -253,14 +255,18 @@ Messages are sent in this format:
 [change, timestamp, source]
 ```
 
-`source` is the id of the node which originated this message.
-Timestamp is the time when the message was created. 
-This message is created using `Scuttlebutt#localUpdate(key, value)`.
+`source` is the id of the node which originated this message.  `timestamp` is
+the time when the message was created, and `change` is a two-element array:
+`[key, value]`, which describes the new value for a given key. The client
+doesn't need to create  these messages manually-- calling
+`Scuttlebutt#localUpdate(key, value)` will on a Scuttlebutt instance will cause
+the message to be constructed and propogated appropriately.
 
-When two `Scuttlebutts` are piped together, they both exchange their current list
-of sources. This is an object of `{source_id: latest_timestamp_for_source_id}`
-After receiving this message, `Scuttlebutt` sends any messages not yet 
-known by the other end. This is the heart of Scuttlebutt Reconciliation.
+When two `Scuttlebutts` are piped together, they both exchange their current
+list of sources. This is an object of `{source_id: latest_timestamp_for_source_id}`
+After receiving this message, `Scuttlebutt` sends any messages not yet known by
+the other end (see the [`Scuttlebutt#history`](#scuttlebutthistorysources)
+method). This is the heart of Scuttlebutt Reconciliation.
 
 ## Security
 
